@@ -87,7 +87,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
         </plugins>
-        <finalName>config-server</finalName>
+        <finalName>gateway-server</finalName>
     </build>
 
 </project>
