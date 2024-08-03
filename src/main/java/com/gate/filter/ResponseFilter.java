@@ -1,7 +1,9 @@
 package com.gate.filter;
 
+import brave.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,16 +15,24 @@ public class ResponseFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(ResponseFilter.class);
 
+    private final Tracer tracer;
+
+    public ResponseFilter(Tracer tracer) {
+        this.tracer = tracer;
+    }
+
     @Bean
     public GlobalFilter postGlobalFilter() {
         GlobalFilter globalFilter = (exchange, chain) -> {
             Mono<Void> monoResponse = chain.filter(exchange).then(Mono.fromRunnable(() -> {
-                HttpHeaders headers = exchange.getRequest().getHeaders();
-                String correlationId = FilterUtils.getCorrelationId(headers);
-                logger.debug("adding the correlationId to the outbound headers. {}", correlationId);
+
+                String traceId = tracer.nextSpan()
+                        .context()
+                        .traceIdString();
+                logger.debug("adding the correlationId to the outbound headers. {}", traceId);
 
                 exchange.getResponse().getHeaders()
-                        .add(FilterUtils.CORRELATION_ID, correlationId);
+                        .add(FilterUtils.CORRELATION_ID, traceId);
                 logger.debug("completing outgoing request for {}", exchange.getRequest().getURI());
             }));
             return monoResponse;
